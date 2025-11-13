@@ -1,3 +1,6 @@
+import { StyleSheet } from 'react-native';
+
+import MealSearchScreen from '@/components/MealSearchScreen';
 import { Text, View } from '@/components/Themed';
 import { StyleSheet } from 'react-native';
 import { FoodSearch } from '../../components/FoodSearch'; // 1. Import your component
@@ -13,6 +16,7 @@ export default function TabOneScreen() {
 
       {/* You can remove this template component */}
       {/* <EditScreenInfo path="app/(tabs)/index.tsx" /> */}
+      <MealSearchScreen />
     </View>
   );
 }
