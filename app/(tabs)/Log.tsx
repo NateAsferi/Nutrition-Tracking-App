@@ -1,8 +1,9 @@
-import { Text, View } from "@/components/Themed";
 import { StyleSheet } from "react-native";
-import { FoodSearch } from "../../components/FoodSearch"; // 1. Import your component
 
-export default function TabOneScreen() {
+import { Text, View } from "@/components/Themed";
+import { LoggedFoods } from "@/components/LoggedFoods";
+
+export default function TabTwoScreen() {
   return (
     <View style={styles.container}>
       <View
@@ -10,12 +11,7 @@ export default function TabOneScreen() {
         lightColor="#eee"
         darkColor="rgba(255,255,255,0.1)"
       />
-
-      {/* 2. Add your FoodSearch component here! */}
-      <FoodSearch />
-
-      {/* You can remove this template component */}
-      {/* <EditScreenInfo path="app/(tabs)/index.tsx" /> */}
+      <LoggedFoods />
     </View>
   );
 }
@@ -24,10 +20,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    padding: 20, // Add some padding
+    justifyContent: "center",
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
   },
   separator: {

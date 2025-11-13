@@ -12,7 +12,7 @@ export default function TabOneScreen() {
       />
 
       {/* 2. Add your FoodSearch component here! */}
-      <FoodSearch />
+      <Text>Coming Soon...</Text>
 
       {/* You can remove this template component */}
       {/* <EditScreenInfo path="app/(tabs)/index.tsx" /> */}
