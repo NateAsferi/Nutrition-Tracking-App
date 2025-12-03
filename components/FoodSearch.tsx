@@ -1,38 +1,78 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Button,
   FlatList,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Button,
 } from "react-native";
 
+import { getNutritionForQuery, NutritionResult } from "@/app/hooks/nutrition";
 import Colors from "@/constants/Colors";
 import { useNutrition } from "../context/NutritionContext";
-import { getNutritionForQuery, NutritionResult } from "@/app/hooks/nutrition";
 import { Food } from "../types/nutrition";
 
 export const FoodSearch = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NutritionResult[]>([]);
+  const [suggestions, setSuggestions] = useState<NutritionResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { addFoodToLog } = useNutrition();
 
-  // Handle text input - only update query state, don't search
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleQueryChange = (text: string) => {
     setQuery(text);
     setError(null);
-    // Clear results when user starts typing
+    
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
     if (!text.trim()) {
       setResults([]);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setHasSearched(false);
+      return;
+    }
+    
+    if (text.trim().length >= 2) {
+      setShowSuggestions(true);
+      setLoadingSuggestions(true);
+      
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          const nutritionResults = await getNutritionForQuery(text.trim());
+          setSuggestions(nutritionResults.slice(0, 5));
+        } catch (err) {
+          console.error("Error getting suggestions:", err);
+          setSuggestions([]);
+        } finally {
+          setLoadingSuggestions(false);
+        }
+      }, 400);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+      setLoadingSuggestions(false);
     }
   };
 
-  // Perform search when button is pressed or Enter is pressed
   const performSearch = async () => {
     if (!query.trim()) {
       setError("Please enter a search term.");
@@ -44,6 +84,9 @@ export const FoodSearch = () => {
       return;
     }
 
+    setShowSuggestions(false);
+    setHasSearched(true);
+    
     setLoading(true);
     setError(null);
     try {
@@ -61,9 +104,14 @@ export const FoodSearch = () => {
     }
   };
 
+  const handleSelectSuggestion = (suggestion: NutritionResult) => {
+    setQuery(suggestion.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setResults([suggestion]);
+  };
+
   const handleAddFood = (nutritionResult: NutritionResult) => {
-    // Convert NutritionResult to Food format
-    // Only add if we have valid nutrition data
     if (
       nutritionResult.calories !== null &&
       nutritionResult.protein !== null &&
@@ -79,7 +127,6 @@ export const FoodSearch = () => {
         fat: nutritionResult.fat,
       };
       addFoodToLog(food);
-      // Show success feedback (optional - you can add a toast notification here)
       setError(null);
     } else {
       setError("Nutritional information incomplete. Cannot add to log.");
@@ -88,23 +135,60 @@ export const FoodSearch = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Search for a food..."
-          placeholderTextColor={Colors.light.tabIconDefault}
-          value={query}
-          onChangeText={handleQueryChange}
-          onSubmitEditing={performSearch}
-          returnKeyType="search"
-        />
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Search"
-            onPress={performSearch}
-            disabled={loading || !query.trim()}
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Search for a food..."
+            placeholderTextColor={Colors.light.tabIconDefault}
+            value={query}
+            onChangeText={handleQueryChange}
+            onSubmitEditing={performSearch}
+            returnKeyType="search"
           />
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Search"
+              onPress={performSearch}
+              disabled={loading || !query.trim()}
+            />
+          </View>
         </View>
+
+        {showSuggestions && query.trim().length >= 2 && !hasSearched && !loading && (
+          <View style={styles.suggestionsContainer}>
+          {loadingSuggestions ? (
+            <View style={styles.suggestionLoadingContainer}>
+              <ActivityIndicator size="small" color={Colors.light.tint} />
+              <Text style={styles.suggestionLoadingText}>Searching...</Text>
+            </View>
+          ) : suggestions.length > 0 ? (
+            <FlatList
+              data={suggestions}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.suggestionItem}
+                  onPress={() => handleSelectSuggestion(item)}
+                >
+                  <Text style={styles.suggestionText}>{item.name}</Text>
+                  {item.calories !== null && (
+                    <Text style={styles.suggestionCalories}>
+                      {item.calories.toFixed(0)} cal
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.fdcId.toString()}
+              style={styles.suggestionsList}
+              nestedScrollEnabled={true}
+            />
+          ) : (
+            <View style={styles.noSuggestionsContainer}>
+              <Text style={styles.noSuggestionsText}>No suggestions found</Text>
+            </View>
+          )}
+          </View>
+        )}
       </View>
 
       {loading && (
@@ -177,7 +261,6 @@ export const FoodSearch = () => {
   );
 };
 
-// Small reusable macro component
 function Macro({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.macroItem}>
@@ -192,10 +275,14 @@ const styles = StyleSheet.create({
     width: "100%",
     flex: 1,
   },
+  searchWrapper: {
+    position: "relative",
+    zIndex: 1,
+    marginBottom: 10,
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   textInput: {
     flex: 1,
@@ -311,6 +398,65 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   noMacrosText: {
+    fontSize: 12,
+    color: Colors.light.tabIconDefault,
+    fontStyle: "italic",
+  },
+  suggestionsContainer: {
+    position: "absolute",
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light.background,
+    borderWidth: 1,
+    borderColor: Colors.light.tabIconDefault + "40",
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginTop: 4,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.tabIconDefault + "20",
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.light.text,
+  },
+  suggestionCalories: {
+    fontSize: 12,
+    color: Colors.light.tabIconDefault,
+    marginLeft: 8,
+  },
+  suggestionLoadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+  },
+  suggestionLoadingText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: Colors.light.tabIconDefault,
+  },
+  noSuggestionsContainer: {
+    padding: 12,
+    alignItems: "center",
+  },
+  noSuggestionsText: {
     fontSize: 12,
     color: Colors.light.tabIconDefault,
     fontStyle: "italic",
