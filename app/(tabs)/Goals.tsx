@@ -1,6 +1,6 @@
 import { Text, View } from "@/components/Themed";
 import { StyleSheet } from "react-native";
-import { FoodSearch } from "../../components/FoodSearch"; // 1. Import your component
+import { Goals } from "../../components/Goals"; // 1. Import your component
 
 export default function TabOneScreen() {
   return (
@@ -12,7 +12,7 @@ export default function TabOneScreen() {
       />
 
       {/* 2. Add your FoodSearch component here! */}
-      <Text>Coming Soon...</Text>
+      <Goals />
 
       {/* You can remove this template component */}
       {/* <EditScreenInfo path="app/(tabs)/index.tsx" /> */}
@@ -24,15 +24,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    padding: 20, // Add some padding
+    padding: 0, // Add some padding
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
   },
   separator: {
-    marginVertical: 30,
+    marginVertical: 10,
     height: 1,
-    width: "80%",
+    width: "100%",
   },
 });

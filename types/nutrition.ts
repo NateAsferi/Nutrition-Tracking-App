@@ -13,3 +13,10 @@ export interface DailyTotals {
   totalCarbs: number;
   totalFat: number;
 }
+
+export interface Goals {
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+}

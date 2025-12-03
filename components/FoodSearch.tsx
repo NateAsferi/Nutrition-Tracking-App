@@ -3,10 +3,12 @@ import {
   ActivityIndicator,
   Button,
   FlatList,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
@@ -14,6 +16,7 @@ import { getNutritionForQuery, NutritionResult } from "@/app/hooks/nutrition";
 import Colors from "@/constants/Colors";
 import { useNutrition } from "../context/NutritionContext";
 import { Food } from "../types/nutrition";
+import { useColorScheme } from "./useColorScheme";
 
 export const FoodSearch = () => {
   const [query, setQuery] = useState("");
@@ -26,6 +29,8 @@ export const FoodSearch = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { addFoodToLog } = useNutrition();
+  const colorScheme = useColorScheme() ?? "light";
+  const colors = Colors[colorScheme];
 
   useEffect(() => {
     return () => {
@@ -38,11 +43,11 @@ export const FoodSearch = () => {
   const handleQueryChange = (text: string) => {
     setQuery(text);
     setError(null);
-    
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    
+
     if (!text.trim()) {
       setResults([]);
       setSuggestions([]);
@@ -50,11 +55,11 @@ export const FoodSearch = () => {
       setHasSearched(false);
       return;
     }
-    
+
     if (text.trim().length >= 2) {
       setShowSuggestions(true);
       setLoadingSuggestions(true);
-      
+
       debounceTimerRef.current = setTimeout(async () => {
         try {
           const nutritionResults = await getNutritionForQuery(text.trim());
@@ -86,7 +91,7 @@ export const FoodSearch = () => {
 
     setShowSuggestions(false);
     setHasSearched(true);
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -134,138 +139,244 @@ export const FoodSearch = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Search for a food..."
-            placeholderTextColor={Colors.light.tabIconDefault}
-            value={query}
-            onChangeText={handleQueryChange}
-            onSubmitEditing={performSearch}
-            returnKeyType="search"
-          />
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Search"
-              onPress={performSearch}
-              disabled={loading || !query.trim()}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={[
+                styles.textInput,
+                {
+                  color: colors.text,
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
+              ]}
+              placeholder="Search for a food..."
+              placeholderTextColor={colors.secondaryText}
+              value={query}
+              onChangeText={handleQueryChange}
+              onSubmitEditing={performSearch}
+              returnKeyType="search"
             />
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Search"
+                onPress={performSearch}
+                disabled={loading || !query.trim()}
+              />
+            </View>
           </View>
+
+          {showSuggestions &&
+            query.trim().length >= 2 &&
+            !hasSearched &&
+            !loading && (
+              <View
+                style={[
+                  styles.suggestionsContainer,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border + "66",
+                  },
+                ]}
+              >
+                {loadingSuggestions ? (
+                  <View style={styles.suggestionLoadingContainer}>
+                    <ActivityIndicator size="small" color={colors.tint} />
+                    <Text
+                      style={[
+                        styles.suggestionLoadingText,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
+                      Searching...
+                    </Text>
+                  </View>
+                ) : suggestions.length > 0 ? (
+                  <FlatList
+                    data={suggestions}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.suggestionItem,
+                          { borderBottomColor: colors.border + "33" },
+                        ]}
+                        onPress={() => handleSelectSuggestion(item)}
+                      >
+                        <Text
+                          style={[
+                            styles.suggestionText,
+                            { color: colors.text },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                        {item.calories !== null && (
+                          <Text
+                            style={[
+                              styles.suggestionCalories,
+                              { color: colors.secondaryText },
+                            ]}
+                          >
+                            {item.calories.toFixed(0)} cal
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    keyExtractor={(item) => item.fdcId.toString()}
+                    style={styles.suggestionsList}
+                    nestedScrollEnabled={true}
+                  />
+                ) : (
+                  <View style={styles.noSuggestionsContainer}>
+                    <Text
+                      style={[
+                        styles.noSuggestionsText,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
+                      No suggestions found
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
         </View>
 
-        {showSuggestions && query.trim().length >= 2 && !hasSearched && !loading && (
-          <View style={styles.suggestionsContainer}>
-          {loadingSuggestions ? (
-            <View style={styles.suggestionLoadingContainer}>
-              <ActivityIndicator size="small" color={Colors.light.tint} />
-              <Text style={styles.suggestionLoadingText}>Searching...</Text>
-            </View>
-          ) : suggestions.length > 0 ? (
-            <FlatList
-              data={suggestions}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestionItem}
-                  onPress={() => handleSelectSuggestion(item)}
-                >
-                  <Text style={styles.suggestionText}>{item.name}</Text>
-                  {item.calories !== null && (
-                    <Text style={styles.suggestionCalories}>
-                      {item.calories.toFixed(0)} cal
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={colors.tint} />
+            <Text style={[styles.loadingText, { color: colors.secondaryText }]}>
+              Searching...
+            </Text>
+          </View>
+        )}
+
+        {error && (
+          <View
+            style={[
+              styles.errorContainer,
+              { backgroundColor: colors.errorBackground },
+            ]}
+          >
+            <Text style={[styles.errorText, { color: colors.errorText }]}>
+              {error}
+            </Text>
+          </View>
+        )}
+
+        {!loading && results.length > 0 && (
+          <View style={styles.resultsHeader}>
+            <Text style={[styles.resultsHeaderText, { color: colors.tint }]}>
+              Found {results.length} food{results.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+        )}
+
+        <FlatList
+          data={results}
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.resultItem,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderBottomColor: colors.border + "50",
+                },
+              ]}
+            >
+              <View style={styles.foodHeader}>
+                <Text style={[styles.resultText, { color: colors.text }]}>
+                  {item.name}
+                </Text>
+                <View style={styles.headerRight}>
+                  {item.servingSize !== null && (
+                    <Text
+                      style={[
+                        styles.servingSize,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
+                      {item.servingSize}g
                     </Text>
                   )}
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.fdcId.toString()}
-              style={styles.suggestionsList}
-              nestedScrollEnabled={true}
-            />
-          ) : (
-            <View style={styles.noSuggestionsContainer}>
-              <Text style={styles.noSuggestionsText}>No suggestions found</Text>
-            </View>
-          )}
-          </View>
-        )}
-      </View>
-
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={Colors.light.tint} />
-          <Text style={styles.loadingText}>Searching...</Text>
-        </View>
-      )}
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      {!loading && results.length > 0 && (
-        <View style={styles.resultsHeader}>
-          <Text style={styles.resultsHeaderText}>
-            Found {results.length} food{results.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      )}
-
-      <FlatList
-        data={results}
-        renderItem={({ item }) => (
-          <View style={styles.resultItem}>
-            <View style={styles.foodHeader}>
-              <Text style={styles.resultText}>{item.name}</Text>
-              <View style={styles.headerRight}>
-                {item.servingSize !== null && (
-                  <Text style={styles.servingSize}>{item.servingSize}g</Text>
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: colors.tint }]}
+                    onPress={() => handleAddFood(item)}
+                  >
+                    <Text style={styles.addButtonText}>Add +</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.macrosContainer}>
+                {item.calories !== null && (
+                  <Macro
+                    label="Calories"
+                    value={`${item.calories.toFixed(0)}`}
+                    colors={colors}
+                  />
                 )}
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => handleAddFood(item)}
-                >
-                  <Text style={styles.addButtonText}>Add +</Text>
-                </TouchableOpacity>
+                {item.protein !== null && (
+                  <Macro
+                    label="Protein"
+                    value={`${item.protein.toFixed(1)}g`}
+                    colors={colors}
+                  />
+                )}
+                {item.carbs !== null && (
+                  <Macro
+                    label="Carbs"
+                    value={`${item.carbs.toFixed(1)}g`}
+                    colors={colors}
+                  />
+                )}
+                {item.fat !== null && (
+                  <Macro
+                    label="Fat"
+                    value={`${item.fat.toFixed(1)}g`}
+                    colors={colors}
+                  />
+                )}
+                {item.calories === null &&
+                  item.protein === null &&
+                  item.carbs === null &&
+                  item.fat === null && (
+                    <Text
+                      style={[
+                        styles.noMacrosText,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
+                      Nutritional info unavailable
+                    </Text>
+                  )}
               </View>
             </View>
-            <View style={styles.macrosContainer}>
-              {item.calories !== null && (
-                <Macro label="Calories" value={`${item.calories.toFixed(0)}`} />
-              )}
-              {item.protein !== null && (
-                <Macro label="Protein" value={`${item.protein.toFixed(1)}g`} />
-              )}
-              {item.carbs !== null && (
-                <Macro label="Carbs" value={`${item.carbs.toFixed(1)}g`} />
-              )}
-              {item.fat !== null && (
-                <Macro label="Fat" value={`${item.fat.toFixed(1)}g`} />
-              )}
-              {item.calories === null &&
-                item.protein === null &&
-                item.carbs === null &&
-                item.fat === null && (
-                  <Text style={styles.noMacrosText}>
-                    Nutritional info unavailable
-                  </Text>
-                )}
-            </View>
-          </View>
-        )}
-        keyExtractor={(item) => item.fdcId.toString()}
-        style={styles.list}
-      />
-    </View>
+          )}
+          keyExtractor={(item) => item.fdcId.toString()}
+          style={styles.list}
+        />
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
-function Macro({ label, value }: { label: string; value: string }) {
+function Macro({
+  label,
+  value,
+  colors,
+}: {
+  label: string;
+  value: string;
+  colors: typeof Colors.light;
+}) {
   return (
-    <View style={styles.macroItem}>
-      <Text style={styles.macroLabel}>{label}</Text>
-      <Text style={styles.macroValue}>{value}</Text>
+    <View style={[styles.macroItem, { backgroundColor: colors.border + "25" }]}>
+      <Text style={[styles.macroLabel, { color: colors.secondaryText }]}>
+        {label}
+      </Text>
+      <Text style={[styles.macroValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
@@ -287,17 +398,14 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     height: 40,
-    borderColor: Colors.light.tabIconDefault,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
-    color: Colors.light.text,
-    backgroundColor: Colors.light.background,
   },
   buttonContainer: {
-    backgroundColor: Colors.light.tint,
     borderRadius: 8,
     marginLeft: 8,
+    overflow: "hidden",
   },
   loadingContainer: {
     flexDirection: "row",
@@ -309,16 +417,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 8,
     fontSize: 14,
-    color: Colors.light.tabIconDefault,
   },
   errorContainer: {
-    backgroundColor: "#fee",
     padding: 8,
     borderRadius: 8,
     marginBottom: 8,
   },
   errorText: {
-    color: "#c00",
     fontSize: 12,
   },
   resultsHeader: {
@@ -327,7 +432,6 @@ const styles = StyleSheet.create({
   resultsHeaderText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.light.tint,
   },
   list: {
     flex: 1,
@@ -335,8 +439,6 @@ const styles = StyleSheet.create({
   resultItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.tabIconDefault + "30",
-    backgroundColor: Colors.light.background,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -347,7 +449,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   resultText: {
-    color: Colors.light.text,
     fontSize: 16,
     fontWeight: "600",
     flex: 1,
@@ -358,10 +459,8 @@ const styles = StyleSheet.create({
   },
   servingSize: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
   },
   addButton: {
-    backgroundColor: Colors.light.tint,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -377,7 +476,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   macroItem: {
-    backgroundColor: Colors.light.tabIconDefault + "15",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -388,18 +486,15 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 10,
-    color: Colors.light.tabIconDefault,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   macroValue: {
     fontSize: 12,
     fontWeight: "bold",
-    color: Colors.light.text,
   },
   noMacrosText: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
     fontStyle: "italic",
   },
   suggestionsContainer: {
@@ -407,9 +502,7 @@ const styles = StyleSheet.create({
     top: 50,
     left: 0,
     right: 0,
-    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: Colors.light.tabIconDefault + "40",
     borderRadius: 8,
     maxHeight: 200,
     zIndex: 1000,
@@ -429,16 +522,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.tabIconDefault + "20",
   },
   suggestionText: {
     flex: 1,
     fontSize: 14,
-    color: Colors.light.text,
   },
   suggestionCalories: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
     marginLeft: 8,
   },
   suggestionLoadingContainer: {
@@ -450,7 +540,6 @@ const styles = StyleSheet.create({
   suggestionLoadingText: {
     marginLeft: 8,
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
   },
   noSuggestionsContainer: {
     padding: 12,
@@ -458,7 +547,6 @@ const styles = StyleSheet.create({
   },
   noSuggestionsText: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
     fontStyle: "italic",
   },
 });

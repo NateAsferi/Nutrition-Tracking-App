@@ -8,9 +8,12 @@ import {
 import Colors from "@/constants/Colors";
 import { useNutrition } from "../context/NutritionContext";
 import { LoggedFood } from "../context/NutritionContext";
+import { useColorScheme } from "./useColorScheme";
 
 export const LoggedFoods = () => {
   const { loggedFoods, totals, deleteFoodFromLog } = useNutrition();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
   const handleDelete = (logId: string) => {
     deleteFoodFromLog(logId);
@@ -19,8 +22,8 @@ export const LoggedFoods = () => {
   if (loggedFoods.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No foods logged yet.</Text>
-        <Text style={styles.emptySubtext}>
+        <Text style={[styles.emptyText, { color: colors.text }]}>No foods logged yet.</Text>
+        <Text style={[styles.emptySubtext, { color: colors.secondaryText }]}>
           Search and add foods to track your nutrition!
         </Text>
       </View>
@@ -30,25 +33,33 @@ export const LoggedFoods = () => {
   return (
     <View style={styles.container}>
       {/* Daily Totals Header */}
-      <View style={styles.totalsContainer}>
-        <Text style={styles.totalsHeader}>Daily Totals</Text>
+      <View style={[
+        styles.totalsContainer,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.border,
+        },
+      ]}>
+        <Text style={[styles.totalsHeader, { color: colors.tint }]}>Daily Totals</Text>
         <View style={styles.totalsGrid}>
           <TotalItem
             label="Calories"
             value={`${totals.totalCalories.toFixed(0)}`}
+            colors={colors}
           />
           <TotalItem
             label="Protein"
             value={`${totals.totalProtein.toFixed(1)}g`}
+            colors={colors}
           />
-          <TotalItem label="Carbs" value={`${totals.totalCarbs.toFixed(1)}g`} />
-          <TotalItem label="Fat" value={`${totals.totalFat.toFixed(1)}g`} />
+          <TotalItem label="Carbs" value={`${totals.totalCarbs.toFixed(1)}g`} colors={colors} />
+          <TotalItem label="Fat" value={`${totals.totalFat.toFixed(1)}g`} colors={colors} />
         </View>
       </View>
 
       {/* Logged Foods List */}
       <View style={styles.foodsHeader}>
-        <Text style={styles.foodsHeaderText}>
+        <Text style={[styles.foodsHeaderText, { color: colors.text }]}>
           Logged Foods ({loggedFoods.length})
         </Text>
       </View>
@@ -56,14 +67,20 @@ export const LoggedFoods = () => {
       <FlatList
         data={loggedFoods}
         renderItem={({ item }) => (
-          <View style={styles.foodItem}>
+          <View style={[
+            styles.foodItem,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border + '50',
+            },
+          ]}>
             <View style={styles.foodContent}>
-              <Text style={styles.foodName}>{item.name}</Text>
+              <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>
               <View style={styles.macrosContainer}>
-                <Macro label="Calories" value={`${item.calories.toFixed(0)}`} />
-                <Macro label="Protein" value={`${item.protein.toFixed(1)}g`} />
-                <Macro label="Carbs" value={`${item.carbs.toFixed(1)}g`} />
-                <Macro label="Fat" value={`${item.fat.toFixed(1)}g`} />
+                <Macro label="Calories" value={`${item.calories.toFixed(0)}`} colors={colors} />
+                <Macro label="Protein" value={`${item.protein.toFixed(1)}g`} colors={colors} />
+                <Macro label="Carbs" value={`${item.carbs.toFixed(1)}g`} colors={colors} />
+                <Macro label="Fat" value={`${item.fat.toFixed(1)}g`} colors={colors} />
               </View>
             </View>
             <TouchableOpacity
@@ -82,21 +99,21 @@ export const LoggedFoods = () => {
 };
 
 // Total item component for daily totals
-function TotalItem({ label, value }: { label: string; value: string }) {
+function TotalItem({ label, value, colors }: { label: string; value: string; colors: typeof Colors.light }) {
   return (
-    <View style={styles.totalItem}>
-      <Text style={styles.totalLabel}>{label}</Text>
-      <Text style={styles.totalValue}>{value}</Text>
+    <View style={[styles.totalItem, { backgroundColor: colors.border + '25' }]}>
+      <Text style={[styles.totalLabel, { color: colors.secondaryText }]}>{label}</Text>
+      <Text style={[styles.totalValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
 
 // Macro component (reused from FoodSearch)
-function Macro({ label, value }: { label: string; value: string }) {
+function Macro({ label, value, colors }: { label: string; value: string; colors: typeof Colors.light }) {
   return (
-    <View style={styles.macroItem}>
-      <Text style={styles.macroLabel}>{label}</Text>
-      <Text style={styles.macroValue}>{value}</Text>
+    <View style={[styles.macroItem, { backgroundColor: colors.border + '25' }]}>
+      <Text style={[styles.macroLabel, { color: colors.secondaryText }]}>{label}</Text>
+      <Text style={[styles.macroValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
@@ -115,18 +132,14 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.light.text,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: Colors.light.tabIconDefault,
     textAlign: "center",
   },
   totalsContainer: {
-    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: Colors.light.tabIconDefault,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -135,7 +148,6 @@ const styles = StyleSheet.create({
   totalsHeader: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.light.tint,
     marginBottom: 12,
   },
   totalsGrid: {
@@ -145,7 +157,6 @@ const styles = StyleSheet.create({
   totalItem: {
     flex: 1,
     minWidth: "45%",
-    backgroundColor: Colors.light.tabIconDefault + "15",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
@@ -154,14 +165,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: Colors.light.text,
   },
   foodsHeader: {
     marginBottom: 12,
@@ -170,16 +179,13 @@ const styles = StyleSheet.create({
   foodsHeaderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.light.text,
   },
   list: {
     flex: 1,
   },
   foodItem: {
     flexDirection: "row",
-    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: Colors.light.tabIconDefault + "30",
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -190,7 +196,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   foodName: {
-    color: Colors.light.text,
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 8,
@@ -200,7 +205,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   macroItem: {
-    backgroundColor: Colors.light.tabIconDefault + "15",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -211,14 +215,12 @@ const styles = StyleSheet.create({
   },
   macroLabel: {
     fontSize: 10,
-    color: Colors.light.tabIconDefault,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   macroValue: {
     fontSize: 12,
     fontWeight: "bold",
-    color: Colors.light.text,
   },
   deleteButton: {
     width: 32,
