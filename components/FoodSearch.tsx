@@ -27,6 +27,7 @@ export const FoodSearch = () => {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [addingFoodId, setAddingFoodId] = useState<string | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { addFoodToLog } = useNutrition();
   const colorScheme = useColorScheme() ?? "light";
@@ -116,15 +117,27 @@ export const FoodSearch = () => {
     setResults([suggestion]);
   };
 
-  const handleAddFood = (nutritionResult: NutritionResult) => {
+  const handleAddFood = async (nutritionResult: NutritionResult) => {
+    const foodId = nutritionResult.fdcId.toString();
+
+    if (addingFoodId === foodId) {
+      return; // Prevent double-clicking
+    }
+
     if (
       nutritionResult.calories !== null &&
       nutritionResult.protein !== null &&
       nutritionResult.carbs !== null &&
       nutritionResult.fat !== null
     ) {
+      setAddingFoodId(foodId);
+      setError(null);
+
+      // Small delay for visual feedback
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       const food: Food = {
-        id: nutritionResult.fdcId.toString(),
+        id: foodId,
         name: nutritionResult.name,
         calories: nutritionResult.calories,
         protein: nutritionResult.protein,
@@ -132,7 +145,11 @@ export const FoodSearch = () => {
         fat: nutritionResult.fat,
       };
       addFoodToLog(food);
-      setError(null);
+
+      // Reset after a brief moment
+      setTimeout(() => {
+        setAddingFoodId(null);
+      }, 500);
     } else {
       setError("Nutritional information incomplete. Cannot add to log.");
     }
@@ -302,10 +319,23 @@ export const FoodSearch = () => {
                     </Text>
                   )}
                   <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.tint }]}
+                    style={[
+                      styles.addButton,
+                      {
+                        backgroundColor: colors.tint,
+                        opacity:
+                          addingFoodId === item.fdcId.toString() ? 0.6 : 1,
+                      },
+                    ]}
                     onPress={() => handleAddFood(item)}
+                    activeOpacity={0.7}
+                    disabled={addingFoodId === item.fdcId.toString()}
                   >
-                    <Text style={styles.addButtonText}>Add +</Text>
+                    {addingFoodId === item.fdcId.toString() ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.addButtonText}>Add +</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
