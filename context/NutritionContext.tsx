@@ -1,16 +1,25 @@
 import { createContext, useContext, useState } from "react";
 import { calculateDailyTotals } from "../services/NutritionService";
-import { DailyTotals, Food } from "../types/nutrition";
+import { DailyTotals, Food, Goals } from "../types/nutrition";
 
 export interface LoggedFood extends Food {
   logId: string;
 }
 
+const defaultGoals: Goals = {
+  calories: 2000,
+  protein: 150,
+  fat: 70,
+  carbs: 250,
+};
+
 interface NutritionContextType {
   loggedFoods: LoggedFood[];
   totals: DailyTotals;
+  goals: Goals;
   addFoodToLog: (food: Food) => void;
   deleteFoodFromLog: (logId: string) => void;
+  updateGoals: (goals: Goals) => void;
 }
 
 const NutritionContext = createContext<NutritionContextType | undefined>(
@@ -22,6 +31,8 @@ export const NutritionProvider = ({
   children: React.ReactNode;
 }) => {
   const [loggedFoods, setLoggedFoods] = useState<LoggedFood[]>([]);
+  const [goals, setGoals] = useState<Goals>(defaultGoals);
+
   const addFoodToLog = (food: Food) => {
     const newLoggedFood: LoggedFood = {
       ...food,
@@ -36,6 +47,10 @@ export const NutritionProvider = ({
     );
   };
 
+  const updateGoals = (newGoals: Goals) => {
+    setGoals(newGoals);
+  };
+
   const totals = calculateDailyTotals(loggedFoods);
 
   return (
@@ -43,8 +58,10 @@ export const NutritionProvider = ({
       value={{
         loggedFoods,
         totals,
+        goals,
         addFoodToLog,
         deleteFoodFromLog,
+        updateGoals,
       }}
     >
       {children}
